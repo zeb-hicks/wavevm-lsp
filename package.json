@@ -1,0 +1,66 @@
+{
+	"name": "wave2-lsp",
+	"description": "Wave2 Language Server",
+	"author": "Nimphious",
+	"license": "MIT",
+	"version": "1.0.1",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/zeb-hicks/wave2-lsp"
+	},
+	"publisher": "Nimphious",
+	"categories": [],
+	"keywords": [
+		"multi-root ready"
+	],
+	"engines": {
+		"vscode": "^1.75.0"
+	},
+	"activationEvents": [
+		"onLanguage:w2s"
+	],
+	"main": "./client/out/extension",
+	"contributes": {
+		"configuration": {
+			"type": "object",
+			"title": "Wave2 Language Server",
+			"properties": {
+				"wave2lsp.maxNumberOfProblems": {
+					"scope": "resource",
+					"type": "number",
+					"default": 100,
+					"description": "Controls the maximum number of problems produced by the server."
+				},
+				"wave2lsp.trace.server": {
+					"scope": "window",
+					"type": "string",
+					"enum": [
+						"off",
+						"messages",
+						"verbose"
+					],
+					"default": "off",
+					"description": "Traces the communication between VS Code and the language server."
+				}
+			}
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -b",
+		"watch": "tsc -b -w",
+		"lint": "eslint",
+		"postinstall": "cd client && npm install && cd ../server && npm install && cd ..",
+		"test": "sh ./scripts/e2e.sh"
+	},
+	"devDependencies": {
+		"@eslint/js": "9.27.0",
+		"@stylistic/eslint-plugin": "4.2.0",
+		"@types/mocha": "10.0.10",
+		"@types/node": "22.15.21",
+		"eslint": "9.27.0",
+		"mocha": "11.4.0",
+		"typescript": "5.8.3",
+		"typescript-eslint": "8.32.1"
+	}
+}

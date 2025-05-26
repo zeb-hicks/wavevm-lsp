@@ -1,0 +1,19 @@
+{
+	"name": "wave2-lsp-server",
+	"description": "LSP server for Wave2",
+	"version": "1.0.0",
+	"author": "Nimphious",
+	"license": "MIT",
+	"engines": {
+		"node": "*"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/zeb-hicks/wave2-lsp"
+	},
+	"dependencies": {
+		"vscode-languageserver": "9.0.1",
+		"vscode-languageserver-textdocument": "1.0.12"
+	},
+	"scripts": {}
+}

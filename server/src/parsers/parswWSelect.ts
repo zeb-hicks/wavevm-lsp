@@ -19,7 +19,7 @@ export function parswWSelect(text: string): Diagnostic | null {
 	let srcType = operandTypeFromString(operands[1].text);
 
 	if (dstType !== InstructionPart.Register) return diag(`WordSelect destination must be a register.`, DiagnosticSeverity.Error, operands[0].start, operands[0].end);
-	if (srcType !== InstructionPart.Register) return diag(`WordSelect source must be a single word swizzle.`, DiagnosticSeverity.Error, operands[1].start, operands[1].end);
+	if (srcType !== InstructionPart.Register && srcType !== InstructionPart.Constant) return diag(`WordSelect source must be register with a single word swizzle.`, DiagnosticSeverity.Error, operands[1].start, operands[1].end);
 
 	let { sOp, sSwi } = /\b(?<sOp>\w+)(?:\.(?<sSwi>\w+))?\b/.exec(operands[1].text)?.groups ?? {};
 	let { dOp, dSwi } = /\b(?<dOp>\w+)(?:\.(?<dSwi>\w+))?\b/.exec(operands[0].text)?.groups ?? {};
@@ -27,7 +27,7 @@ export function parswWSelect(text: string): Diagnostic | null {
 	if (dSwi !== undefined) return diag(`Word Select instruction destinations cannot be swizzled.`, DiagnosticSeverity.Error, operands[0].start, operands[0].end);
 
 	if (sSwi !== undefined && sSwi !== "" && !/^[xyzw]$/.test(sSwi)) {
-		return diag(`Word Select instruction src swizzle must be one word.`, DiagnosticSeverity.Error, operands[1].start, operands[1].end);
+		return diag(`Word Select instruction source swizzle must be exactly one word.`, DiagnosticSeverity.Error, operands[1].start, operands[1].end);
 	}
 
 	return null;

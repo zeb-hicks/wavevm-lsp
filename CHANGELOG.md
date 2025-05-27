@@ -8,3 +8,8 @@
 
 ### Added:
 - Conditional jump support
+
+## [1.0.2]
+
+### F9xed:
+- WSelect now correctly accept constant registers

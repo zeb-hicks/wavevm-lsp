@@ -12,7 +12,7 @@ export function parseJump(text: string): Diagnostic | null {
 	if (operands === undefined || operands.length === 0)
 		return diag(`Jump instruction requires at least 1 operand`, DiagnosticSeverity.Error, operands?.[0]?.start, operands?.[operands.length - 1]?.end);
 
-	if (operands.length > 1)
+	if (operands.length != 1)
 		return diag(`Jump instructions require 1 operand, found ${operands?.length || 0}`, DiagnosticSeverity.Error, operands[0].start, operands[operands.length - 1].end);
 
 	let dstType = operandTypeFromString(operands[0].text);

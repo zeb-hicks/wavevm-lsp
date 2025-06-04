@@ -1,11 +1,14 @@
 import { Diagnostic, DiagnosticSeverity } from 'vscode-languageserver';
-import { operandTypeFromString } from '../parsing';
-import { chop, diag } from '../validation';
+import { InstructionPart, operandTypeFromString } from '../parsing';
+import { chop, diag, validSize } from '../validation';
 
 export function parseMath(text: string): Diagnostic | null {
 	let { instruction, size, operands, comment } = chop(text) || {};
 
 	if (!instruction) return null;
+
+	let diagSize = validSize(size?.text);
+	if (diagSize) return diagSize;
 
 	if (operands?.length !== 3) {
 		return diag(`Math instructions require 3 operands, found ${operands?.length || 0}`, DiagnosticSeverity.Error);
@@ -22,6 +25,11 @@ export function parseMath(text: string): Diagnostic | null {
 	if (lSwi !== undefined) return diag(`Math operands cannot be swizzled.`, DiagnosticSeverity.Error, operands[1].start, operands[1].end);
 	if (rSwi !== undefined) return diag(`Math operands cannot be swizzled.`, DiagnosticSeverity.Error, operands[2].start, operands[2].end);
 
-	// TODO: Validate math properly
+	if (dstType !== InstructionPart.Register) return diag(`Math destination must be a writable register.`, DiagnosticSeverity.Error, operands[0].start, operands[0].end);
+	if (lhsType !== InstructionPart.Register && lhsType !== InstructionPart.Constant) return diag(`Math operands must be registers or constants.`, DiagnosticSeverity.Error, operands[1].start, operands[1].end);
+	if (rhsType !== InstructionPart.Register && rhsType !== InstructionPart.Constant) return diag(`Math operands must be registers or constants.`, DiagnosticSeverity.Error, operands[2].start, operands[2].end);
+
+	if (dOp !== lOp && dOp !== rOp) return diag(`Math destination must also be included in the calculation.`, DiagnosticSeverity.Error, operands[0].start, operands[2].end);
+
 	return null;
 }

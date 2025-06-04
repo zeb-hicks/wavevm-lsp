@@ -11,5 +11,13 @@
 
 ## [1.0.2]
 
-### F9xed:
+### Fixed:
 - WSelect now correctly accept constant registers
+
+## [1.1.0]
+
+### Fixed:
+- Some LSP parsing errors
+
+### Added:
+- Finished math instruction validation

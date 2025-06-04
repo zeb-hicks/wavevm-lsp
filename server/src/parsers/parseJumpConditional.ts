@@ -12,8 +12,8 @@ export function parseJumpConditional(text: string): Diagnostic | null {
 	if (operands === undefined || operands.length === 0)
 		return diag(`Conditional jump expects 2 operands`, DiagnosticSeverity.Error, operands?.[0]?.start, operands?.[operands.length - 1]?.end);
 
-	if (operands.length > 2)
-		return diag(`Conditional jump expects 2 operands, ${operands?.length || 0} were supplied`, DiagnosticSeverity.Error, operands[0].start, operands[operands.length - 1].end);
+	if (operands.length != 2)
+		return diag(`Conditional jump expects 2 operands, found ${operands?.length || 0}`, DiagnosticSeverity.Error, operands[0].start, operands[operands.length - 1].end);
 
 	let srcType = operandTypeFromString(operands[0].text);
 	let dstType = operandTypeFromString(operands[1].text);

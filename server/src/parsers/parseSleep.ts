@@ -1,6 +1,6 @@
-import { Diagnostic, DiagnosticSeverity } from 'vscode-languageserver';
+import { Diagnostic, DiagnosticSeverity, MarkupContent, MarkupKind } from 'vscode-languageserver';
 import { InstructionPart } from '../parsing';
-import { chop, diag, validPart } from '../validation';
+import { chop, diag, Span, validPart } from '../validation';
 
 export function parseSleep(text: string): Diagnostic | null {
 	let { instruction, size, operands, comment } = chop(text) || {};
@@ -28,7 +28,7 @@ export function parseSleep(text: string): Diagnostic | null {
 		return diag(`Sleep takes 1 operand, found ${operands?.length || 0}`, DiagnosticSeverity.Error, start, end);
 	}
 
-	let isRegister = validPart(operands[0].text, InstructionPart.Register);
+	let isRegister = validPart(operands[0].text, InstructionPart.Register) || validPart(operands[0].text, InstructionPart.Constant);
 
 	if (sized && !isRegister) {
 		let start = operands[0].start;
@@ -48,5 +48,30 @@ export function parseSleep(text: string): Diagnostic | null {
 		return diag(`Expected valid number, got ${operands[0].text}`, DiagnosticSeverity.Error, start, end);
 	}
 
+	return null;
+}
+
+export function stringifySleep(text: string, instruction?: Span, size?: Span, operands?: Span[], comment?: Span): MarkupContent | null {
+	if (instruction === undefined) return null;
+	if (operands === undefined) return null;
+	if (parseSleep(text) === null && operands !== undefined) {
+		if (size !== undefined) {
+			let part = {
+				".w": "first word",
+				".h": "high byte of the first word",
+				".l": "low byte of the first word",
+			}[size.text];
+			let reg = operands[0].text;
+			return {
+				kind: MarkupKind.Markdown,
+				value: `# Sleep\n\nSleep for the number of ticks stored in ${part} of the \`${reg}\` register.`
+			}
+		} else {
+			return {
+				kind: MarkupKind.Markdown,
+				value: `# Sleep\n\nSleep for \`${operands[0].text}\` ticks.`
+			}
+		}
+	}
 	return null;
 }

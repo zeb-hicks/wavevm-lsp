@@ -20,13 +20,25 @@ import {
 	Range,
 	MarkupContent,
 	Position,
-	InlineCompletionList} from 'vscode-languageserver/node';
+	HoverRequest,
+	HoverParams,
+	Hover,
+	WorkspaceEdit,
+	RenameRequest,
+	TextDocumentIdentifier,
+	TextDocumentEdit,
+	VersionedTextDocumentIdentifier} from 'vscode-languageserver/node';
+
+// import {
+// 	MarkdownString
+// } from "vscode";
 
 import {
 	TextDocument
 } from 'vscode-languageserver-textdocument';
-import { AssemblySyntaxContext, InstructionPart, InstructionType, instructionTypeFromString, instructionTypeStrings } from './parsing';
-import { ParserForInstruction } from './validation';
+import { AssemblySyntaxContext, InstructionPart, InstructionType, instructionTypeFromString, instructionTypeStrings, stringifyOperand } from './parsing';
+import { chop, HoverDocForInstruction, ParserForInstruction, Span } from './validation';
+import { InlineCompletionFeature } from 'vscode-languageserver/lib/common/inlineCompletion.proposed.js';
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -82,7 +94,9 @@ connection.onInitialize((params: InitializeParams) => {
 connection.onInitialized(() => {
 	if (hasConfigurationCapability) {
 		// Register for all configuration changes.
-		connection.client.register(DidChangeConfigurationNotification.type, undefined);
+		connection.client.register(DidChangeConfigurationNotification.type);
+		connection.client.register(HoverRequest.type);
+		connection.client.register(RenameRequest.type);
 	}
 	if (hasWorkspaceFolderCapability) {
 		connection.workspace.onDidChangeWorkspaceFolders(_event => {
@@ -119,6 +133,121 @@ connection.onDidChangeConfiguration(change => {
 	// to the existing setting, but this is out of scope for this example.
 	connection.languages.diagnostics.refresh();
 });
+
+connection.onHover((hover: HoverParams): Hover | null => {
+	let doc = documents.get(hover.textDocument.uri);
+	if (doc) {
+		let line_range = Range.create(hover.position.line, 0, hover.position.line + 1, 0);
+		let line_text = doc.getText(line_range);
+		let { md, span } = makeHoverText(line_text, hover.position.character) || {};
+		if (md && span) {
+			let range = Range.create(line_range.start.line, line_range.start.character + span?.start, line_range.start.line, span?.end);
+			return {
+				contents: md,
+				range: range
+			}
+		}
+	}
+	return null;
+});
+
+function inflateAt(document: TextDocument, position: Position, test: RegExp): Range {
+	if (!document) return Range.create(position, position);
+	let l = position.line;
+	let c = position.character;
+	let range = Range.create(l, c, l, c);
+	let testRange = Range.create(l, c - 1, l, c);
+	let lim = 256;
+	while (lim-- > 0 && test.test(document.getText(testRange))) {
+		range.start.character--;
+		testRange.start.character--;
+		testRange.end.character--;
+	}
+	lim = 256;
+	testRange = Range.create(l, c, l, c + 1);
+	while (lim-- > 0 && test.test(document.getText(testRange))) {
+		if (document.getText(testRange) == '\n') {
+			break;
+		}
+		range.end.character++;
+		testRange.start.character++;
+		testRange.end.character++;
+	}
+	return range;
+}
+
+// connection.onRenameRequest((rename): WorkspaceEdit | null => {;
+// 	let doc = documents.get(rename.textDocument.uri);
+// 	if (!doc) return null;
+// 	let range = inflateAt(doc, rename.position, /[:a-zA-Z0-9]/);
+// 	let rangeText = documents.get(rename.textDocument.uri)?.getText(range);
+// 	console.log("Rename request:", rename.position, rename.newName, range, rangeText);
+
+// 	let doc_text = doc.getText();
+// 	let lines = doc_text.split('\n');
+// 	let edits: TextDocumentEdit[] = [];
+// 	for (let line in lines) {
+// 		edits.push({
+// 			textDocument: vdoc,
+// 			edits: [
+
+// 			]
+// 		})
+// 	}
+
+// 	let vdoc: VersionedTextDocumentIdentifier = {
+// 		uri: rename.textDocument.uri,
+// 		version: 1,
+// 	}
+// 	let wsedit: WorkspaceEdit = {
+// 		documentChanges: [{
+// 			edits: [
+// 				{
+// 					annotationId: "rename",
+// 					newText: rename.newName,
+// 					range: range
+// 				}
+// 			],
+// 			textDocument: vdoc,
+// 		}],
+
+// 	}
+
+// 	return null;
+// });
+
+type MarkupAndSpan = {
+	md: MarkupContent,
+	span: Span
+}
+
+function makeHoverText(text: string, pos: number): MarkupAndSpan | null {
+	let { instruction, size, operands, comment } = chop(text) || {};
+
+	if (instruction !== undefined && pos >= instruction.start && pos < instruction.end) {
+		let type = instructionTypeFromString(instruction.text);
+		if (type) {
+			let md = HoverDocForInstruction[type](text, instruction, size, operands, comment);
+			if (md) {
+				return { md, span: instruction };
+			}
+		}
+	} else if (size !== undefined && pos >= size.start && pos < size.end) {
+
+	} else if (operands !== undefined) {
+		for (let operand of operands) {
+			if (pos >= operand.start && pos < operand.end) {
+				let parsed = stringifyOperand(operand.text);
+				return {
+					md: { kind: "markdown", value: `${parsed}` },
+					span: operand
+				}
+			}
+		}
+	}
+
+	return null;
+}
 
 function getDocumentSettings(resource: string): Thenable<Wave2LSPSettings> {
 	if (!hasConfigurationCapability) {
@@ -512,39 +641,52 @@ connection.onCompletion(
 		if (lineSoFar && context === AssemblySyntaxContext.Code) {
 			let splitWhitespace = /(?:^|\s+)(\S+)/g.exec(lineSoFar);
 			if (splitWhitespace) {
+				let parts = splitWhitespace.splice(1);
 				let instruction = null;
 				let lastWord = "";
-				for (let i = 0; i < splitWhitespace.length; i++) {
-					let word = splitWhitespace[i];
-					switch (context) {
-						case AssemblySyntaxContext.Code:
-							if (lastWord !== "") {
-								let t = instructionTypeFromString(lastWord);
-								if (t !== null) {
-									instruction = t;
-								}
-							}
-							if (instruction !== null) {
-								let inst = instructionTypeStrings(instruction);
-								for (const i of inst) {
-									if (i.length > 0) {
-										return [
-											{ label: i, kind: CompletionItemKind.Function, data: 0 }
-										];
-									}
-								}
-							} else {
-								if (/\.$/.test(word)) {
-									context = AssemblySyntaxContext.InstructionSize;
-								} else {
-									context = AssemblySyntaxContext.Instruction;
-								}
-							}
-						default:
-
+				if (parts.length == 1) {
+					let parts = lineSoFar.split(".");
+					if (parts.length == 2) {
+						// We're in the size specifier
+						context = AssemblySyntaxContext.InstructionSize;
+					} else {
+						// We're typing an instruction
+						context = AssemblySyntaxContext.Instruction;
 					}
-					lastWord = word;
+				} else {
+					context = contextForInstruction(parts);
 				}
+				// for (let i = 0; i < parts.length; i++) {
+				// 	let word = parts[i];
+				// 	switch (context) {
+				// 		case AssemblySyntaxContext.Code:
+				// 			if (lastWord !== "") {
+				// 				let t = instructionTypeFromString(lastWord);
+				// 				if (t !== null) {
+				// 					instruction = t;
+				// 				}
+				// 			}
+				// 			if (instruction !== null) {
+				// 				let inst = instructionTypeStrings(instruction);
+				// 				for (const i of inst) {
+				// 					if (i.length > 0) {
+				// 						return [
+				// 							{ label: i, kind: CompletionItemKind.Function, data: 0 }
+				// 						];
+				// 					}
+				// 				}
+				// 			} else {
+				// 				if (/\.$/.test(word)) {
+				// 					context = AssemblySyntaxContext.InstructionSize;
+				// 				} else {
+				// 					context = AssemblySyntaxContext.Instruction;
+				// 				}
+				// 			}
+				// 		default:
+
+				// 	}
+				// 	lastWord = word;
+				// }
 			}
 		}
 
@@ -559,7 +701,7 @@ connection.onCompletion(
 			}
 		}
 
-		let insts = [];
+		let insts: CompletionItem[] = [];
 		// for (const [key, instruction] of Object.entries(instructions)) {
 		// 	const inst = instructionTypeStrings(instruction.type);
 		// 	for (const i of inst) {
@@ -571,7 +713,13 @@ connection.onCompletion(
 
 		for (const t of Object.entries(InstructionType)) {
 			for (const s of instructionTypeStrings(t[1])) {
-				insts.push({ label: s, kind: CompletionItemKind.Function, data: 0 });
+				switch (t[1]) {
+					case InstructionType.Skip:
+						insts.push({ label: s, kind: CompletionItemKind.Function, data: 0, labelDetails: { detail: ` ${t[1] + s.substring(s.length - 1)}` } });
+						break;
+					default:
+						insts.push({ label: s, kind: CompletionItemKind.Function, data: 0, labelDetails: { detail: ` ${t[1]}` } });
+				}
 			}
 		}
 
@@ -585,7 +733,7 @@ connection.onCompletion(
 			];
 			case AssemblySyntaxContext.Root: return [
 				{ label: ".memory", kind: CompletionItemKind.Keyword, data: 0, insertText: ".memory", preselect: true, sortText: "0" },
-				{ label: ".code", kind: CompletionItemKind.Keyword, data: 0, insertText: ".code", sortText: "1" },
+				{ label: ".code", kind: CompletionItemKind.Keyword, data: 1, insertText: ".code", sortText: "1" },
 			];
 			case AssemblySyntaxContext.Register: return [
 				{ label: "c0", kind: CompletionItemKind.Reference, data: 0 },
@@ -608,21 +756,113 @@ connection.onCompletion(
 			];
 			case AssemblySyntaxContext.RegisterSwizzle: return [
 				{ label: "x", kind: CompletionItemKind.Property, data: 0 },
-				{ label: "y", kind: CompletionItemKind.Property, data: 0 },
-				{ label: "z", kind: CompletionItemKind.Property, data: 0 },
-				{ label: "w", kind: CompletionItemKind.Property, data: 0 },
+				{ label: "y", kind: CompletionItemKind.Property, data: 1 },
+				{ label: "z", kind: CompletionItemKind.Property, data: 2 },
+				{ label: "w", kind: CompletionItemKind.Property, data: 3 },
 				...swizzles4
 			];
 			case AssemblySyntaxContext.InstructionSize: return [
-				{ label: "b", kind: CompletionItemKind.Keyword, data: 0, detail: "Byte Operation - Operates on 8 bits of data from the least significant end of the word." },
-				{ label: "w", kind: CompletionItemKind.Keyword, data: 1, detail: "Word Operation - Operates on 16 bits of data from the whole word." },
+				{ label: "b", kind: CompletionItemKind.Unit, data: 0, labelDetails: { detail: " Byte", description: "Byte Operation - SIMD Operation over 16-bit words."} },
+				{ label: "w", kind: CompletionItemKind.Unit, data: 1, labelDetails: { detail: " Word", description: "Word Operation - SIMD Operation over 8-bit words."} },
+				{ label: "h", kind: CompletionItemKind.Unit, data: 2, labelDetails: { detail: " High", description: "High Byte Operation - Operates on 8 bits of data from the first word."} },
+				{ label: "l", kind: CompletionItemKind.Unit, data: 3, labelDetails: { detail: " Low", description: "Low Byte Operation - Operates on 8 bits of data from the first word."} },
 			];
+			case AssemblySyntaxContext.Immediate: return [];
 			default: return [
 				...insts,
 			];
 		}
 	}
 );
+
+function contextForInstruction(parts: string[]): AssemblySyntaxContext {
+	let inst = instructionTypeFromString(parts[0]);
+	let size_part = inst?.split(".")[1] ?? null;
+	switch (inst) {
+		case InstructionType.Nop:
+		case InstructionType.Halt:
+		case InstructionType.Skip:
+			return AssemblySyntaxContext.Code;
+
+		case InstructionType.Sleep:
+			if (parts.length == 1 && size_part !== null) return AssemblySyntaxContext.InstructionSize;
+			if (parts.length == 2 && size_part !== null) return AssemblySyntaxContext.Register;
+			return AssemblySyntaxContext.Immediate;
+
+		case InstructionType.MoveWord:
+		case InstructionType.SwapWord:
+		case InstructionType.AddWord:
+		case InstructionType.SubtractWord:
+			break;
+
+		case InstructionType.Move:
+			break;
+
+		case InstructionType.Swizzle:
+			break;
+
+		case InstructionType.Add:
+		case InstructionType.AddSaturate:
+		case InstructionType.Subtract:
+		case InstructionType.SubtractSaturate:
+		case InstructionType.Equal:
+		case InstructionType.NotEqual:
+		case InstructionType.Carry:
+		case InstructionType.LessThan:
+		case InstructionType.GreaterThan:
+		case InstructionType.LessorEqual:
+		case InstructionType.GreaterorEqual:
+		case InstructionType.AddOver:
+		case InstructionType.SubtractOver:
+		case InstructionType.ReverseSubtractOver:
+			if (parts.length == 1 && size_part !== null) return AssemblySyntaxContext.InstructionSize;
+			break;
+
+		case InstructionType.ShiftLeft:
+		case InstructionType.ShiftRight:
+		case InstructionType.ArithmeticShiftRight:
+		case InstructionType.RotateLeft:
+		case InstructionType.RotateRight:
+			if (parts.length == 1 && size_part !== null) return AssemblySyntaxContext.InstructionSize;
+			break;
+
+		case InstructionType.BitwiseAnd:
+		case InstructionType.BitwiseOr:
+		case InstructionType.BitwiseXor:
+		case InstructionType.BitwiseNand:
+		case InstructionType.BitwiseNor:
+		case InstructionType.BitwiseXnor:
+		case InstructionType.BitwiseNotSrc:
+		case InstructionType.BitwiseSrcAndNotDst:
+		case InstructionType.BitwiseNotSrcAndDst:
+		case InstructionType.BitwiseSrcOrNotDst:
+		case InstructionType.BitwiseNotSrcOrDst:
+		case InstructionType.BitwiseSwap:
+			break;
+		case InstructionType.BitwiseNotDst:
+		case InstructionType.BitwiseAll:
+		case InstructionType.BitwiseOne:
+			break;
+
+		case InstructionType.HorizontalAdd:
+		case InstructionType.MultiplySaturate:
+		case InstructionType.MultiplyLow:
+		case InstructionType.MultiplyHigh:
+		case InstructionType.Divide:
+		case InstructionType.ReciprocalDivide:
+			break;
+
+		case InstructionType.Set:
+			break;
+		case InstructionType.Jump:
+			break;
+		case InstructionType.JumpEqual:
+			break;
+		case InstructionType.JumpNotEqual:
+			break;
+	}
+	return AssemblySyntaxContext.Code;
+}
 
 // This handler resolves additional information for the item selected in
 // the completion list.

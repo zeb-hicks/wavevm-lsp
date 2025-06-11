@@ -1,9 +1,14 @@
-import { Diagnostic, DiagnosticSeverity } from 'vscode-languageserver';
-import { chop, diag } from '../validation';
+import { Diagnostic, DiagnosticSeverity, MarkupContent, MarkupKind } from 'vscode-languageserver';
+import { chop, diag, Span } from '../validation';
 import { InstructionPart, operandTypeFromString } from '../parsing';
 
 export function parseJump(text: string): Diagnostic | null {
 	let { instruction, size, operands, comment } = chop(text) || {};
+
+	return validateJump(instruction, size, operands, comment);
+}
+
+function validateJump(instruction?: Span, size?: Span, operands?: Span[], comment?: Span): Diagnostic | null {
 	if (!instruction) return null;
 
 	if (size !== undefined)
@@ -23,5 +28,15 @@ export function parseJump(text: string): Diagnostic | null {
 	if (dstType !== InstructionPart.Label && dstType !== InstructionPart.Immediate)
 		return diag(`Jump destination must be a label or immediate, found ${dstType}`, DiagnosticSeverity.Error, operands[0].start, operands[0].end);
 
+	return null;
+}
+
+export function stringifyJump(text: string, instruction?: Span, size?: Span, operands?: Span[], comment?: Span): MarkupContent | null {
+	if (validateJump(instruction, size, operands, comment) == null) {
+		return {
+			kind: "markdown",
+			value: `# Jump\n\nJump to the specified address or label.\n\n[Documentation](https://nimphio.us/wave2/w2s/instructions/macros/jump.html)`
+		};
+	}
 	return null;
 }

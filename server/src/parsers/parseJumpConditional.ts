@@ -1,9 +1,14 @@
-import { Diagnostic, DiagnosticSeverity } from 'vscode-languageserver';
-import { chop, diag } from '../validation';
-import { InstructionPart, operandTypeFromString } from '../parsing';
+import { Diagnostic, DiagnosticSeverity, MarkupContent } from 'vscode-languageserver';
+import { chop, diag, Span } from '../validation';
+import { InstructionPart, InstructionType, instructionTypeFromString, operandTypeFromString } from '../parsing';
 
 export function parseJumpConditional(text: string): Diagnostic | null {
 	let { instruction, size, operands, comment } = chop(text) || {};
+
+	return validateJumpConditional(text, instruction, size, operands, comment);
+}
+
+export function validateJumpConditional(text: string, instruction?: Span, size?: Span, operands?: Span[], comment?: Span): Diagnostic | null {
 	if (!instruction) return null;
 
 	if (size !== undefined)
@@ -29,5 +34,18 @@ export function parseJumpConditional(text: string): Diagnostic | null {
 	if (dstType !== InstructionPart.Label && dstType !== InstructionPart.Immediate)
 		return diag(`Jump destination must be a label or immediate, found ${dstType}`, DiagnosticSeverity.Error, operands[1].start, operands[1].end);
 
+	return null;
+}
+
+export function stringifyJumpConditional(text: string, instruction?: Span, size?: Span, operands?: Span[], comment?: Span): MarkupContent | null {
+	if (validateJumpConditional(text, instruction, size, operands, comment) == null) {
+		let inst = instructionTypeFromString(instruction?.text || "");
+		let neq = inst == InstructionType.JumpNotEqual;
+		let reg = (operands || [{text:"ERR"}])[0].text;
+		return {
+			kind: "markdown",
+			value: `# Jump if ${neq?"Not Equal":"Equal"}\n\nJump to the specified address or label if ${reg} is ${neq?"0xffff":"0x0000"}.\n\n[Documentation](https://nimphio.us/wave2/w2s/instructions/macros/jump.html)`
+		};
+	}
 	return null;
 }

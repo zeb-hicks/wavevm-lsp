@@ -35,21 +35,21 @@ export enum InstructionType {
 	RotateLeft = "Rotate Left",
 	RotateRight = "Rotate Right",
 
-	BitwiseAnd = "Bitwise And",
-	BitwiseOr = "Bitwise Or",
-	BitwiseXor = "Bitwise Xor",
-	BitwiseNand = "Bitwise Nand",
-	BitwiseNor = "Bitwise Nor",
-	BitwiseXnor = "Bitwise Xnor",
-	BitwiseNotSrc = "Bitwise Not Src",
-	BitwiseNotDst = "Bitwise Not Dest",
-	BitwiseSrcAndNotDst = "Bitwise Src And Not Dest",
-	BitwiseNotSrcAndDst = "Bitwise Not Src And Dest",
-	BitwiseSrcOrNotDst = "Bitwise Src Or Not Dest",
-	BitwiseNotSrcOrDst = "Bitwise Not Src Or Dest",
-	BitwiseAll = "Bitwise All",
-	BitwiseOne = "Bitwise One",
-	BitwiseSwap = "Bitwise Swap",
+	BitwiseAnd = "And",
+	BitwiseOr = "Or",
+	BitwiseXor = "Xor",
+	BitwiseNand = "Nand",
+	BitwiseNor = "Nor",
+	BitwiseXnor = "Xnor",
+	BitwiseNotSrc = "Not Src",
+	BitwiseNotDst = "Not Dest",
+	BitwiseSrcAndNotDst = "Src And Not Dest",
+	BitwiseNotSrcAndDst = "Not Src And Dest",
+	BitwiseSrcOrNotDst = "Src Or Not Dest",
+	BitwiseNotSrcOrDst = "Not Src Or Dest",
+	BitwiseAll = "All",
+	BitwiseOne = "One",
+	BitwiseSwap = "Swap",
 
 	HorizontalAdd = "Horizontal Add",
 	MultiplySaturate = "Multiply Saturate",
@@ -60,7 +60,8 @@ export enum InstructionType {
 
 	Set = "Set",
 	Jump = "Jump",
-	JumpConditional = "Jump Conditional",
+	JumpEqual = "Jump if Equal",
+	JumpNotEqual = "Jump if Not Equal",
 }
 
 export function instructionTypeStrings(type: InstructionType): string[] {
@@ -129,7 +130,8 @@ export function instructionTypeStrings(type: InstructionType): string[] {
 
 		case InstructionType.Set: return ["set", "set1", "set2", "set3", "set4"];
 		case InstructionType.Jump: return ["jmp", "jump"];
-		case InstructionType.JumpConditional: return ["je", "jeq", "jc", "jcp", "jne", "jnc", "jcc"];
+		case InstructionType.JumpEqual: return ["je", "jeq", "jc", "jcp"];
+		case InstructionType.JumpNotEqual: return ["jne", "jnc", "jcc"];
 
 		default: return [];
 	}
@@ -246,10 +248,11 @@ export function instructionTypeFromString(str: string): InstructionType | null {
 		case "je":
 		case "jeq":
 		case "jc":
-		case "jcp":
+		case "jcp": return InstructionType.JumpEqual;
+
 		case "jne":
 		case "jnc":
-		case "jcc": return InstructionType.JumpConditional;
+		case "jcc": return InstructionType.JumpNotEqual;
 
 		default: return null;
 	}
@@ -263,6 +266,43 @@ export function operandTypeFromString(str: string): InstructionPart | null {
 	if (/^\$?[0-9a-fA-F]+$/.test(str)) return InstructionPart.Immediate;
 	if (/^:[0-9a-zA-Z_]+$/.test(str)) return InstructionPart.Label;
 	return null;
+}
+
+export function stringifyOperand(str: string): string | null {
+	let type = operandTypeFromString(str);
+	let ls = str.toLowerCase();
+	let {reg, swi} = /(?<reg>[rc][0-7]|ri)(?:\.(?<swi>[xyzw]{1,4}))?/.exec(ls)?.groups || {};
+	// let reg;
+	switch (type) {
+		case InstructionPart.Constant:
+			return `Constant Register \`${reg}\`${swi !== undefined ? ` word${swi.length > 1?"s":""} \`${swi}\`` : ""}`;
+		case InstructionPart.Register:
+			return `General Purpose Register \`${reg}\`${swi !== undefined ? ` word${swi.length > 1?"s":""} \`${swi}\`` : ""}`;
+		case InstructionPart.Pointer:
+			// reg = /([rc][0-7]|ri)/.exec(ls)?.[0];
+			return `Memory at address of \`${reg}\``;
+		case InstructionPart.PointerIncrement:
+			// reg = /([rc][0-7]|ri)/.exec(ls)?.[0];
+			return `Memory at address of \`${reg}\` which is incremented upon each read.`;
+		case InstructionPart.Label:
+			return `Value of Label \`${str}\``;
+		case InstructionPart.Immediate:
+			let val = parseImmediate(ls);
+			return `Immediate value \`${ls}\` (${val})`
+	}
+	return null;
+}
+
+function parseImmediate(str: string): number {
+	try {
+		switch (str[0]) {
+			case "$":
+				return Number.parseInt(str.substring(1), 16);
+			default:
+				return Number.parseInt(str, 10);
+		}
+	} catch (e) {}
+	return NaN;
 }
 
 export function operandTypeString(type: InstructionPart): string {

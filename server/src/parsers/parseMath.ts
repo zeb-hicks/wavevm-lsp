@@ -1,10 +1,14 @@
-import { Diagnostic, DiagnosticSeverity } from 'vscode-languageserver';
+import { Diagnostic, DiagnosticSeverity, MarkupContent } from 'vscode-languageserver';
 import { InstructionPart, operandTypeFromString } from '../parsing';
-import { chop, diag, validSize } from '../validation';
+import { chop, diag, Span, validSize } from '../validation';
 
 export function parseMath(text: string): Diagnostic | null {
 	let { instruction, size, operands, comment } = chop(text) || {};
 
+	return validateMath(text, instruction, size, operands, comment);
+}
+
+export function validateMath(text: string, instruction?: Span, size?: Span, operands?: Span[], comment?: Span): Diagnostic | null {
 	if (!instruction) return null;
 
 	let diagSize = validSize(size?.text);
@@ -31,5 +35,15 @@ export function parseMath(text: string): Diagnostic | null {
 
 	if (dOp !== lOp && dOp !== rOp) return diag(`Math destination must also be included in the calculation.`, DiagnosticSeverity.Error, operands[0].start, operands[2].end);
 
+	return null;
+}
+
+export function stringifyMath(text: string, instruction?: Span, size?: Span, operands?: Span[], comment?: Span): MarkupContent | null {
+	if (validateMath(text, instruction, size, operands, comment) == null) {
+		return {
+			kind: "markdown",
+			value: `# Math\n\nPerforms the specified math operation.\n\n[Documentation](https://nimphio.us/wave2/w2s/instructions/math.html)`
+		};
+	}
 	return null;
 }

@@ -4,7 +4,7 @@
  * ------------------------------------------------------------------------------------------ */
 
 import * as path from 'path';
-import { workspace, ExtensionContext } from 'vscode';
+import { workspace, MarkdownString, ExtensionContext } from 'vscode';
 
 import {
 	LanguageClient,
@@ -33,7 +33,6 @@ export function activate(context: ExtensionContext) {
 
 	// Options to control the language client
 	const clientOptions: LanguageClientOptions = {
-		// Register the server for plain text documents
 		documentSelector: [{ scheme: 'file', language: 'w2s' }],
 		synchronize: {
 			// Notify the server about file changes to '.clientrc files contained in the workspace

@@ -1,9 +1,14 @@
-import { Diagnostic, DiagnosticSeverity } from 'vscode-languageserver';
+import { Diagnostic, DiagnosticSeverity, MarkupContent } from 'vscode-languageserver';
 import { operandTypeFromString, InstructionPart } from '../parsing';
-import { chop, diag } from '../validation';
+import { chop, diag, Span } from '../validation';
 
-export function parswWSelect(text: string): Diagnostic | null {
+export function parseWSelect(text: string): Diagnostic | null {
 	let { instruction, size, operands, comment } = chop(text) || {};
+
+	return validateWSelect(text, instruction, size, operands, comment);
+}
+
+export function validateWSelect(text: string, instruction?: Span, size?: Span, operands?: Span[], comment?: Span): Diagnostic | null {
 
 	if (!instruction) return null;
 
@@ -30,5 +35,15 @@ export function parswWSelect(text: string): Diagnostic | null {
 		return diag(`Word Select instruction source swizzle must be exactly one word.`, DiagnosticSeverity.Error, operands[1].start, operands[1].end);
 	}
 
+	return null;
+}
+
+export function stringifyWSelect(text: string, instruction?: Span, size?: Span, operands?: Span[], comment?: Span): MarkupContent | null {
+	if (validateWSelect(text, instruction, size, operands, comment) == null) {
+		return {
+			kind: "markdown",
+			value: `# Halt\n\nHalt the current core.\n\n[Documentation](https://nimphio.us/wave2/w2s/instructions/system.html#halt)`
+		};
+	}
 	return null;
 }

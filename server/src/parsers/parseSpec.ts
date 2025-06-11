@@ -1,9 +1,14 @@
-import { Diagnostic, DiagnosticSeverity } from 'vscode-languageserver';
+import { Diagnostic, DiagnosticSeverity, MarkupContent } from 'vscode-languageserver';
 import { operandTypeFromString, InstructionPart } from '../parsing';
-import { chop, diag } from '../validation';
+import { chop, diag, Span } from '../validation';
 
 export function parseSpec(text: string): Diagnostic | null {
 	let { instruction, size, operands, comment } = chop(text) || {};
+
+	return validateSpec(text, instruction, size, operands, comment);
+}
+
+export function validateSpec(text: string, instruction?: Span, size?: Span, operands?: Span[], comment?: Span): Diagnostic | null {
 	if (!instruction) return null;
 
 	// Two operaands, no swizzle, first register must be writeable
@@ -28,5 +33,15 @@ export function parseSpec(text: string): Diagnostic | null {
 	if (dSwi !== undefined) return diag(`Special operation destinations cannot be swizzled.`, DiagnosticSeverity.Error, operands[0].start, operands[0].end);
 	if (sSwi !== undefined) return diag(`Special operation sources cannot be swizzled.`, DiagnosticSeverity.Error, operands[1].start, operands[1].end);
 
+	return null;
+}
+
+export function stringifySpec(text: string, instruction?: Span, size?: Span, operands?: Span[], comment?: Span): MarkupContent | null {
+	if (validateSpec(text, instruction, size, operands, comment) == null) {
+		return {
+			kind: "markdown",
+			value: `# Special: ${instruction?.text}\n\nSpecial instruction.\n\n[Documentation](https://nimphio.us/wave2/w2s/instructions/special.html)`
+		};
+	}
 	return null;
 }

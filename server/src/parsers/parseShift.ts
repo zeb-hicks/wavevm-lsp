@@ -1,9 +1,14 @@
-import { Diagnostic, DiagnosticSeverity } from 'vscode-languageserver';
+import { Diagnostic, DiagnosticSeverity, MarkupContent } from 'vscode-languageserver';
 import { operandTypeFromString, InstructionPart } from '../parsing';
-import { chop, validSize, diag } from '../validation';
+import { chop, validSize, diag, Span } from '../validation';
 
 export function parseShift(text: string): Diagnostic | null {
 	let { instruction, size, operands, comment } = chop(text) || {};
+
+	return validateShift(text, instruction, size, operands, comment);
+}
+
+export function validateShift(text: string, instruction?: Span, size?: Span, operands?: Span[], comment?: Span): Diagnostic | null {
 	if (!instruction) return null;
 
 	let diagSize = validSize(size?.text);
@@ -23,5 +28,15 @@ export function parseShift(text: string): Diagnostic | null {
 	if (srcType !== InstructionPart.Register && srcType !== InstructionPart.Immediate && srcType !== InstructionPart.Constant)
 		return diag(`Shift instruction source must be a register or immediate value.`, DiagnosticSeverity.Error, operands[1].start, operands[1].end);
 
+	return null;
+}
+
+export function stringifyShift(text: string, instruction?: Span, size?: Span, operands?: Span[], comment?: Span): MarkupContent | null {
+	if (validateShift(text, instruction, size, operands, comment) == null) {
+		return {
+			kind: "markdown",
+			value: `# Shift\n\nPerforms the specified bitwise shift operation.\n\n[Documentation](https://nimphio.us/wave2/w2s/instructions/shift.html)`
+		};
+	}
 	return null;
 }

@@ -1,28 +1,30 @@
-import { Diagnostic, DiagnosticSeverity, Range } from 'vscode-languageserver';
-import { InstructionPart, InstructionType, operandTypeFromString } from './parsing';
-import { parseNop } from './parsers/parseNop';
-import { parseHalt } from './parsers/parseHalt';
-import { parseSleep } from './parsers/parseSleep';
-import { parseMove } from './parsers/parseMove';
-import { parswWSelect } from './parsers/parswWSelect';
-import { parseMath } from './parsers/parseMath';
-import { parseSwizzle } from './parsers/parseSwizzle';
-import { parseSkip } from './parsers/parseSkip';
-import { parseShift } from './parsers/parseShift';
-import { parseSpec } from './parsers/parseSpec';
-import { parseSet } from './parsers/parseSet';
-import { parseJump } from './parsers/parseJump';
-import { parseJumpConditional } from './parsers/parseJumpConditional';
+import { Diagnostic, DiagnosticSeverity, MarkupContent, Range } from 'vscode-languageserver';
+import { InstructionPart, InstructionType } from './parsing';
+import { parseNop, stringifyNop } from './parsers/parseNop';
+import { parseHalt, stringifyHalt } from './parsers/parseHalt';
+import { parseSleep, stringifySleep } from './parsers/parseSleep';
+import { parseMove, stringifyMove } from './parsers/parseMove';
+import { parseWSelect, stringifyWSelect } from './parsers/parseWSelect';
+import { parseMath, stringifyMath } from './parsers/parseMath';
+import { parseSwizzle, stringifySwizzle } from './parsers/parseSwizzle';
+import { parseSkip, stringifySkip } from './parsers/parseSkip';
+import { parseShift, stringifyShift } from './parsers/parseShift';
+import { parseSpec, stringifySpec } from './parsers/parseSpec';
+import { parseSet, stringifySet } from './parsers/parseSet';
+import { parseJump, stringifyJump } from './parsers/parseJump';
+import { parseJumpConditional, stringifyJumpConditional } from './parsers/parseJumpConditional';
+import { parseBitwise, stringifyBitwise } from './parsers/parseBitwise';
 
 type ParserFunction = (text: string) => Diagnostic | null;
+type MarkdownFunction = (text: string, instruction?: Span, size?: Span, operands?: Span[], comment?: Span) => MarkupContent | null;
 
-type Span = {
+export type Span = {
 	start: number;
 	end: number;
 	text: string;
 }
 
-type ChoppedCodeLine = {
+export type ChoppedCodeLine = {
 	instruction: Span;
 	size?: Span;
 	operands: Span[];
@@ -135,44 +137,16 @@ export function validSize(size?: string): Diagnostic | null {
 	return null;
 }
 
-function parseBitwise(text: string): Diagnostic | null {
-	let { instruction, size, operands, comment } = chop(text) || {};
-	if (!instruction) return null;
-
-	if (size !== undefined)
-		return diag(`Bitwise instruction does not take a size modifier: ${size.text}`, DiagnosticSeverity.Error);
-
-	if (operands == null || operands.length === 0)
-		return diag(`Bitwise instructions require at least 1 operand, found ${operands?.length || 0}`, DiagnosticSeverity.Error);
-
-	let dstType = operandTypeFromString(operands[0].text);
-
-	switch (instruction.text) {
-		case "all":
-		case "one":
-		case "notdst":
-			if (operands?.length !== 1)
-				return diag(`Unary bitwise instructions require 1 operand, found ${operands?.length || 0}`, DiagnosticSeverity.Error);
-			break;
-		default:
-			if (operands?.length !== 2)
-				return diag(`Bitwise instructions require 2 operands, found ${operands?.length || 0}`, DiagnosticSeverity.Error);
-			let srcType = operandTypeFromString(operands[1].text);
-	}
-
-	return null;
-}
-
 export const ParserForInstruction: Record<InstructionType, ParserFunction> = {
 	[InstructionType.Nop]: parseNop,
 	[InstructionType.Sleep]: parseSleep,
 	[InstructionType.Halt]: parseHalt,
 	[InstructionType.Skip]: parseSkip,
 
-	[InstructionType.MoveWord]: parswWSelect,
-	[InstructionType.SwapWord]: parswWSelect,
-	[InstructionType.AddWord]: parswWSelect,
-	[InstructionType.SubtractWord]: parswWSelect,
+	[InstructionType.MoveWord]: parseWSelect,
+	[InstructionType.SwapWord]: parseWSelect,
+	[InstructionType.AddWord]: parseWSelect,
+	[InstructionType.SubtractWord]: parseWSelect,
 
 	[InstructionType.Move]: parseMove,
 
@@ -224,5 +198,71 @@ export const ParserForInstruction: Record<InstructionType, ParserFunction> = {
 
 	[InstructionType.Set]: parseSet,
 	[InstructionType.Jump]: parseJump,
-	[InstructionType.JumpConditional]: parseJumpConditional,
+	[InstructionType.JumpEqual]: parseJumpConditional,
+	[InstructionType.JumpNotEqual]: parseJumpConditional,
+};
+
+export const HoverDocForInstruction: Record<InstructionType, MarkdownFunction> = {
+	[InstructionType.Nop]: stringifyNop,
+	[InstructionType.Sleep]: stringifySleep,
+	[InstructionType.Halt]: stringifyHalt,
+	[InstructionType.Skip]: stringifySkip,
+
+	[InstructionType.MoveWord]: stringifyWSelect,
+	[InstructionType.SwapWord]: stringifyWSelect,
+	[InstructionType.AddWord]: stringifyWSelect,
+	[InstructionType.SubtractWord]: stringifyWSelect,
+
+	[InstructionType.Move]: stringifyMove,
+
+	[InstructionType.Swizzle]: stringifySwizzle,
+
+	[InstructionType.Add]: stringifyMath,
+	[InstructionType.AddSaturate]: stringifyMath,
+	[InstructionType.Subtract]: stringifyMath,
+	[InstructionType.SubtractSaturate]: stringifyMath,
+	[InstructionType.Equal]: stringifyMath,
+	[InstructionType.NotEqual]: stringifyMath,
+	[InstructionType.Carry]: stringifyMath,
+	[InstructionType.LessThan]: stringifyMath,
+	[InstructionType.GreaterThan]: stringifyMath,
+	[InstructionType.LessorEqual]: stringifyMath,
+	[InstructionType.GreaterorEqual]: stringifyMath,
+	[InstructionType.AddOver]: stringifyMath,
+	[InstructionType.SubtractOver]: stringifyMath,
+	[InstructionType.ReverseSubtractOver]: stringifyMath,
+
+	[InstructionType.ShiftLeft]: stringifyShift,
+	[InstructionType.ShiftRight]: stringifyShift,
+	[InstructionType.ArithmeticShiftRight]: stringifyShift,
+	[InstructionType.RotateLeft]: stringifyShift,
+	[InstructionType.RotateRight]: stringifyShift,
+
+	[InstructionType.BitwiseAnd]: stringifyBitwise,
+	[InstructionType.BitwiseOr]: stringifyBitwise,
+	[InstructionType.BitwiseXor]: stringifyBitwise,
+	[InstructionType.BitwiseNand]: stringifyBitwise,
+	[InstructionType.BitwiseNor]: stringifyBitwise,
+	[InstructionType.BitwiseXnor]: stringifyBitwise,
+	[InstructionType.BitwiseNotSrc]: stringifyBitwise,
+	[InstructionType.BitwiseNotDst]: stringifyBitwise,
+	[InstructionType.BitwiseSrcAndNotDst]: stringifyBitwise,
+	[InstructionType.BitwiseNotSrcAndDst]: stringifyBitwise,
+	[InstructionType.BitwiseSrcOrNotDst]: stringifyBitwise,
+	[InstructionType.BitwiseNotSrcOrDst]: stringifyBitwise,
+	[InstructionType.BitwiseAll]: stringifyBitwise,
+	[InstructionType.BitwiseOne]: stringifyBitwise,
+	[InstructionType.BitwiseSwap]: stringifyBitwise,
+
+	[InstructionType.HorizontalAdd]: stringifySpec,
+	[InstructionType.MultiplySaturate]: stringifySpec,
+	[InstructionType.MultiplyLow]: stringifySpec,
+	[InstructionType.MultiplyHigh]: stringifySpec,
+	[InstructionType.Divide]: stringifySpec,
+	[InstructionType.ReciprocalDivide]: stringifySpec,
+
+	[InstructionType.Set]: stringifySet,
+	[InstructionType.Jump]: stringifyJump,
+	[InstructionType.JumpEqual]: stringifyJumpConditional,
+	[InstructionType.JumpNotEqual]: stringifyJumpConditional,
 };

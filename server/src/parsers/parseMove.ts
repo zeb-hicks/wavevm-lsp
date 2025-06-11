@@ -1,9 +1,14 @@
-import { Diagnostic, DiagnosticSeverity } from 'vscode-languageserver';
+import { Diagnostic, DiagnosticSeverity, MarkupContent, MarkupKind } from 'vscode-languageserver';
 import { operandTypeFromString, InstructionPart, operandTypeString } from '../parsing';
-import { chop, diag } from '../validation';
+import { chop, diag, Span } from '../validation';
 
 export function parseMove(text: string): Diagnostic | null {
 	let { instruction, size, operands, comment } = chop(text) || {};
+
+	return validateMove(text, instruction, size, operands, comment);
+}
+
+export function validateMove(text: string, instruction?: Span, size?: Span, operands?: Span[], comment?: Span): Diagnostic | null {
 
 	if (!instruction) return null;
 
@@ -84,5 +89,15 @@ export function parseMove(text: string): Diagnostic | null {
 		}
 	}
 
+	return null;
+}
+
+export function stringifyMove(text: string, instruction?: Span, size?: Span, operands?: Span[], comment?: Span): MarkupContent | null {
+	if (validateMove(text, instruction, size, operands, comment) == null) {
+		return {
+			kind: "markdown",
+			value: `# Move\n\nPerforms a move, load, or store, depending on context.\n\n[Documentation](https://nimphio.us/wave2/w2s/instructions/move.html)`
+		};
+	}
 	return null;
 }

@@ -21,3 +21,11 @@
 
 ### Added:
 - Finished math instruction validation
+
+## [1.2.0]
+
+### Fixed:
+- Support for unary bitwise instructions not needing two operands
+
+### Added:
+- Preliminary hover descriptions for most things.

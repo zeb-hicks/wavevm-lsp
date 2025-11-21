@@ -28,6 +28,7 @@ export enum InstructionType {
 	AddOver = "Add Over",
 	SubtractOver = "Subtract Over",
 	ReverseSubtractOver = "Reverse Subtract Over",
+	Zero = "Zero",
 
 	ShiftLeft = "Shift Left",
 	ShiftRight = "Shift Right",
@@ -87,6 +88,8 @@ export function instructionTypeStrings(type: InstructionType): string[] {
 		case InstructionType.SubtractSaturate: return ["subs"];
 		case InstructionType.SubtractOver: return ["subo", "subover"];
 		case InstructionType.ReverseSubtractOver: return ["rsubo", "rsubover"];
+
+		case InstructionType.Zero: return ["zero"];
 
 		case InstructionType.Equal: return ["eq", "equ"];
 		case InstructionType.NotEqual: return ["neq", "neq"];
@@ -220,6 +223,7 @@ export function instructionTypeFromString(str: string): InstructionType | null {
 		case "all": return InstructionType.BitwiseAll;
 		case "one": return InstructionType.BitwiseOne;
 		case "swap": return InstructionType.BitwiseSwap;
+		case "zero": return InstructionType.Zero;
 
 		case "hadd": return InstructionType.HorizontalAdd;
 		case "mul":
@@ -391,14 +395,14 @@ export enum InstructionPart {
 
 export function RegisterName(reg: Register): string {
 	if (reg >= 0 && reg < 8) return `C${reg & 0x7}`;
-	if (reg >= 0 && reg < 15) return `R${(reg >> 4) & 0x7}`;
+	if (reg >= 8 && reg < 15) return `R${(reg >> 4) & 0x7}`;
 	if (reg == Register.ri) return "Ri";
 	return "Unknown Register";
 }
 
 export function RegisterLongName(reg: Register): string {
 	if (reg >= 0 && reg < 8) return `Constant C${reg & 0x7}`;
-	if (reg >= 0 && reg < 15) return `Register R${(reg >> 4) & 0x7}`;
+	if (reg >= 8 && reg < 15) return `Register R${(reg >> 4) & 0x7}`;
 	if (reg == Register.ri) return "Program Counter (Ri)";
 	return "Unknown Register";
 }

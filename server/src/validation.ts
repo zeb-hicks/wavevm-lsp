@@ -6,6 +6,7 @@ import { parseSleep, stringifySleep } from './parsers/parseSleep';
 import { parseMove, stringifyMove } from './parsers/parseMove';
 import { parseWSelect, stringifyWSelect } from './parsers/parseWSelect';
 import { parseMath, stringifyMath } from './parsers/parseMath';
+import { parseZero, stringifyZero } from './parsers/parseZero';
 import { parseSwizzle, stringifySwizzle } from './parsers/parseSwizzle';
 import { parseSkip, stringifySkip } from './parsers/parseSkip';
 import { parseShift, stringifyShift } from './parsers/parseShift';
@@ -167,6 +168,8 @@ export const ParserForInstruction: Record<InstructionType, ParserFunction> = {
 	[InstructionType.SubtractOver]: parseMath,
 	[InstructionType.ReverseSubtractOver]: parseMath,
 
+	[InstructionType.Zero]: parseZero,
+
 	[InstructionType.ShiftLeft]: parseShift,
 	[InstructionType.ShiftRight]: parseShift,
 	[InstructionType.ArithmeticShiftRight]: parseShift,
@@ -231,6 +234,8 @@ export const HoverDocForInstruction: Record<InstructionType, MarkdownFunction> =
 	[InstructionType.AddOver]: stringifyMath,
 	[InstructionType.SubtractOver]: stringifyMath,
 	[InstructionType.ReverseSubtractOver]: stringifyMath,
+
+	[InstructionType.Zero]: stringifyZero,
 
 	[InstructionType.ShiftLeft]: stringifyShift,
 	[InstructionType.ShiftRight]: stringifyShift,

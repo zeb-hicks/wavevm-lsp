@@ -29,3 +29,8 @@
 
 ### Added:
 - Preliminary hover descriptions for most things.
+
+## [1.3.0]
+
+### Added:
+- Added support for the `zero` shorthand instruction.

@@ -27,7 +27,10 @@ import {
 	RenameRequest,
 	TextDocumentIdentifier,
 	TextDocumentEdit,
-	VersionedTextDocumentIdentifier} from 'vscode-languageserver/node';
+	VersionedTextDocumentIdentifier,
+	FoldingRangeRequest,
+	FoldingRange,
+	FoldingRangeKind} from 'vscode-languageserver/node';
 
 // import {
 // 	MarkdownString
@@ -97,6 +100,7 @@ connection.onInitialized(() => {
 		connection.client.register(DidChangeConfigurationNotification.type);
 		connection.client.register(HoverRequest.type);
 		connection.client.register(RenameRequest.type);
+		connection.client.register(FoldingRangeRequest.type);
 	}
 	if (hasWorkspaceFolderCapability) {
 		connection.workspace.onDidChangeWorkspaceFolders(_event => {
@@ -118,6 +122,48 @@ let globalSettings: Wave2LSPSettings = defaultSettings;
 
 // Cache the settings of all open documents
 const documentSettings = new Map<string, Thenable<Wave2LSPSettings>>();
+
+connection.onFoldingRanges((params) => {
+	const doc = documents.get(params.textDocument.uri);
+	if (!doc) return null;
+
+	let ranges: FoldingRange[] = [];
+	let lines = doc.getText().split('\n');
+
+	let current = -1;
+	let current_text = "";
+
+	for (let i = 0; i < lines.length; i++) {
+		let label = /(?<label>\.code|\.memory)/gi.exec(lines[i])?.groups?.label;
+		if (label) {
+			if (current == -1) {
+				// First fold region start
+				current = i;
+				current_text = label;
+			} else if (current < i) {
+				// Found the end of the region, add a fold range
+				ranges.push({
+					startLine: current,
+					endLine: i - 1,
+					kind: FoldingRangeKind.Region,
+					collapsedText: current_text
+				});
+				current = i;
+				current_text = label;
+			}
+		}
+	}
+	if (current != -1) {
+		ranges.push({
+			startLine: current,
+			endLine: lines.length - 1,
+			kind: FoldingRangeKind.Region,
+			collapsedText: current_text
+		});
+	}
+
+	return ranges;
+});
 
 connection.onDidChangeConfiguration(change => {
 	if (hasConfigurationCapability) {

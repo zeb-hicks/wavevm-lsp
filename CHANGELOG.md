@@ -34,3 +34,8 @@
 
 ### Added:
 - Added support for the `zero` shorthand instruction.
+
+## [1.4.0]
+
+### Added:
+- Code folding added for `.code` and `.memory` regions.

@@ -1,4 +1,6 @@
 .vscode/**
+wasm/**
+scripts/**
 **/*.ts
 **/*.map
 .gitignore

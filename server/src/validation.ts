@@ -1,22 +1,21 @@
 import { Diagnostic, DiagnosticSeverity, MarkupContent, Range } from 'vscode-languageserver';
 import { InstructionPart, InstructionType } from './parsing';
-import { parseNop, stringifyNop } from './parsers/parseNop';
-import { parseHalt, stringifyHalt } from './parsers/parseHalt';
-import { parseSleep, stringifySleep } from './parsers/parseSleep';
-import { parseMove, stringifyMove } from './parsers/parseMove';
-import { parseWSelect, stringifyWSelect } from './parsers/parseWSelect';
-import { parseMath, stringifyMath } from './parsers/parseMath';
-import { parseZero, stringifyZero } from './parsers/parseZero';
-import { parseSwizzle, stringifySwizzle } from './parsers/parseSwizzle';
-import { parseSkip, stringifySkip } from './parsers/parseSkip';
-import { parseShift, stringifyShift } from './parsers/parseShift';
-import { parseSpec, stringifySpec } from './parsers/parseSpec';
-import { parseSet, stringifySet } from './parsers/parseSet';
-import { parseJump, stringifyJump } from './parsers/parseJump';
-import { parseJumpConditional, stringifyJumpConditional } from './parsers/parseJumpConditional';
-import { parseBitwise, stringifyBitwise } from './parsers/parseBitwise';
+import { stringifyNop } from './parsers/parseNop';
+import { stringifyHalt } from './parsers/parseHalt';
+import { stringifySleep } from './parsers/parseSleep';
+import { stringifyMove } from './parsers/parseMove';
+import { stringifyWSelect } from './parsers/parseWSelect';
+import { stringifyMath } from './parsers/parseMath';
+import { stringifyZero } from './parsers/parseZero';
+import { stringifySwizzle } from './parsers/parseSwizzle';
+import { stringifySkip } from './parsers/parseSkip';
+import { stringifyShift } from './parsers/parseShift';
+import { stringifySpec } from './parsers/parseSpec';
+import { stringifySet } from './parsers/parseSet';
+import { stringifyJump } from './parsers/parseJump';
+import { stringifyJumpConditional } from './parsers/parseJumpConditional';
+import { stringifyBitwise } from './parsers/parseBitwise';
 
-type ParserFunction = (text: string) => Diagnostic | null;
 type MarkdownFunction = (text: string, instruction?: Span, size?: Span, operands?: Span[], comment?: Span) => MarkupContent | null;
 
 export type Span = {
@@ -128,82 +127,11 @@ export function validPart(operand: string, opType: InstructionPart): boolean {
 	return false;
 }
 
-function __ni__(text: string): Diagnostic | null {
-	return diag(`Parser not implemented for instruction: ${text}`, DiagnosticSeverity.Information);
-}
-
 export function validSize(size?: string): Diagnostic | null {
 	if (size === undefined) return diag(`Invalid size modifier. Expected .b or .w`, DiagnosticSeverity.Error);
 
 	return null;
 }
-
-export const ParserForInstruction: Record<InstructionType, ParserFunction> = {
-	[InstructionType.Nop]: parseNop,
-	[InstructionType.Sleep]: parseSleep,
-	[InstructionType.Halt]: parseHalt,
-	[InstructionType.Skip]: parseSkip,
-
-	[InstructionType.MoveWord]: parseWSelect,
-	[InstructionType.SwapWord]: parseWSelect,
-	[InstructionType.AddWord]: parseWSelect,
-	[InstructionType.SubtractWord]: parseWSelect,
-
-	[InstructionType.Move]: parseMove,
-
-	[InstructionType.Swizzle]: parseSwizzle,
-
-	[InstructionType.Add]: parseMath,
-	[InstructionType.AddSaturate]: parseMath,
-	[InstructionType.Subtract]: parseMath,
-	[InstructionType.SubtractSaturate]: parseMath,
-	[InstructionType.Equal]: parseMath,
-	[InstructionType.NotEqual]: parseMath,
-	[InstructionType.Carry]: parseMath,
-	[InstructionType.LessThan]: parseMath,
-	[InstructionType.GreaterThan]: parseMath,
-	[InstructionType.LessorEqual]: parseMath,
-	[InstructionType.GreaterorEqual]: parseMath,
-	[InstructionType.AddOver]: parseMath,
-	[InstructionType.SubtractOver]: parseMath,
-	[InstructionType.ReverseSubtractOver]: parseMath,
-
-	[InstructionType.Zero]: parseZero,
-
-	[InstructionType.ShiftLeft]: parseShift,
-	[InstructionType.ShiftRight]: parseShift,
-	[InstructionType.ArithmeticShiftRight]: parseShift,
-	[InstructionType.RotateLeft]: parseShift,
-	[InstructionType.RotateRight]: parseShift,
-
-	[InstructionType.BitwiseAnd]: parseBitwise,
-	[InstructionType.BitwiseOr]: parseBitwise,
-	[InstructionType.BitwiseXor]: parseBitwise,
-	[InstructionType.BitwiseNand]: parseBitwise,
-	[InstructionType.BitwiseNor]: parseBitwise,
-	[InstructionType.BitwiseXnor]: parseBitwise,
-	[InstructionType.BitwiseNotSrc]: parseBitwise,
-	[InstructionType.BitwiseNotDst]: parseBitwise,
-	[InstructionType.BitwiseSrcAndNotDst]: parseBitwise,
-	[InstructionType.BitwiseNotSrcAndDst]: parseBitwise,
-	[InstructionType.BitwiseSrcOrNotDst]: parseBitwise,
-	[InstructionType.BitwiseNotSrcOrDst]: parseBitwise,
-	[InstructionType.BitwiseAll]: parseBitwise,
-	[InstructionType.BitwiseOne]: parseBitwise,
-	[InstructionType.BitwiseSwap]: parseBitwise,
-
-	[InstructionType.HorizontalAdd]: parseSpec,
-	[InstructionType.MultiplySaturate]: parseSpec,
-	[InstructionType.MultiplyLow]: parseSpec,
-	[InstructionType.MultiplyHigh]: parseSpec,
-	[InstructionType.Divide]: parseSpec,
-	[InstructionType.ReciprocalDivide]: parseSpec,
-
-	[InstructionType.Set]: parseSet,
-	[InstructionType.Jump]: parseJump,
-	[InstructionType.JumpEqual]: parseJumpConditional,
-	[InstructionType.JumpNotEqual]: parseJumpConditional,
-};
 
 export const HoverDocForInstruction: Record<InstructionType, MarkdownFunction> = {
 	[InstructionType.Nop]: stringifyNop,

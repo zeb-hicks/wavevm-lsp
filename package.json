@@ -3,7 +3,7 @@
 	"description": "Wave2 Language Server",
 	"author": "Nimphious",
 	"license": "MIT",
-	"version": "1.4.0",
+	"version": "2.0.0",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/zeb-hicks/wave2-lsp"
@@ -47,8 +47,9 @@
 	},
 	"scripts": {
 		"vscode:prepublish": "npm run compile",
-		"compile": "tsc -b",
-		"watch": "tsc -b -w",
+		"compile": "npm run build:wasm && tsc -b",
+		"build:wasm": "node scripts/build-wasm.js",
+		"watch": "npm run build:wasm && tsc -b -w",
 		"lint": "eslint",
 		"postinstall": "cd client && npm install && cd ../server && npm install && cd ..",
 		"test": "sh ./scripts/e2e.sh"

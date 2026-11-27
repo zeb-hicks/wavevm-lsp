@@ -39,3 +39,8 @@
 
 ### Added:
 - Code folding added for `.code` and `.memory` regions.
+
+## [1.5.0]
+
+### Changed:
+- Diagnostics now come from the real Wave2 assembler, compiled to WebAssembly, instead of a hand-written TypeScript validator.

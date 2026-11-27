@@ -1,0 +1,158 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Wave2 Assembly",
+	"patterns": [
+		{ "include": "#comments" },
+		{
+			"begin": "(\\.memory)",
+			"end": "(\\.code)",
+			"beginCaptures": { "1": { "name": "support.function" } },
+			"endCaptures": { "1": { "name": "support.function" } },
+			"patterns": [
+				{
+					"name": "constant.numeric",
+					"match": "\\b[a-fA-F0-9]+\\b"
+				},
+				{ "include": "#comments" }
+			]
+		},
+		{
+			"match": "(\\.code|\\.bank \\d+)",
+			"name": "support.function"
+		},
+		{ "include": "#labels" },
+		{ "include": "#immediates" },
+		{ "include": "#system" },
+		{ "include": "#word" },
+		{ "include": "#memory" },
+		{ "include": "#math" },
+		{ "include": "#comparison" },
+		{ "include": "#shifts" },
+		{ "include": "#skips" },
+		{ "include": "#sets" },
+		{ "include": "#jumps" },
+		{ "include": "#bitops" },
+		{ "include": "#specops" },
+		{ "include": "#registers" },
+		{ "include": "#literals" },
+		{ "include": "#pointers" }
+	],
+	"repository": {
+		"comments": {
+			"patterns": [{
+				"name": "comment.line.w2s",
+				"match": ";.*$"
+			}]
+		},
+		"labels": {
+			"patterns": [{
+				"name": "entity.name.variable",
+				"match": "(\\:[0-9a-zA-Z_]+)"
+			}]
+		},
+		"immediates": {
+			"patterns": [{
+				"name": "constant.numeric",
+				"match": "^\\s*(\\![0-9a-fA-F]+)"
+			}]
+		},
+		"system": {
+			"patterns": [{
+				"name": "keyword.system.w2s",
+				"match": "\\b((:?nop|hlt|halt)|(:?slp|sleep)(:?\\.[hlw])?)\\b"
+			}]
+		},
+		"word": {
+			"patterns": [{
+				"name": "keyword.word.w2s",
+				"match": "\\b(wmov|wmove|wswap|wadd|wsub)\\b"
+			}]
+		},
+		"memory": {
+			"patterns": [{
+				"name": "keyword.memory.w2s",
+				"match": "\\b(mov|move|swi|swizzle)\\b"
+			}]
+		},
+		"math": {
+			"patterns": [{
+				"name": "keyword.math.w2s",
+				"match": "\\b(add|adds|sub|subs|carry|ado|addo|addover|suo|subo|subover|rso|rsuo|rsubo|rsubover)(\\.[bw])?\\b"
+			}]
+		},
+		"comparison": {
+			"patterns": [{
+				"name": "keyword.comparison.w2s",
+				"match": "\\b(eq|equ|ne|neq|lt|gt|le|lte|ge|gte)(\\.[bw])?\\b"
+			}]
+		},
+		"shifts": {
+			"patterns": [{
+				"name": "keyword.shifts.w2s",
+				"match": "\\b(lsl|asl|rol|asr|lsr|ror)(\\.[bw])?\\b"
+			}]
+		},
+		"skips": {
+			"patterns": [{
+				"name": "keyword.skip.w2s",
+				"match": "\\b(skip[1234]?)\\b"
+			}]
+		},
+		"sets": {
+			"patterns": [{
+				"name": "keyword.set.w2s",
+				"match": "\\b(set[1234]?)\\b"
+			}]
+		},
+		"jumps": {
+			"patterns": [{
+				"name": "keyword.jump.w2s",
+				"match": "\\b(jmp|jeq?|jc|jcp|jne|jnc|jcc)\\b"
+			}]
+		},
+		"bitops": {
+			"patterns": [{
+				"name": "keyword.bitops.w2s",
+				"match": "\\b(all|one|zero|swp|swap|nsrc|notsrc|ndst|notdst|notdest|sand|srcandnotdst|nsad|notsrcanddst|sond|srcornotdst|nsod|notsrcordst|and|or|xor|nand|nor|xnor)(\\.[bw])?\\b"
+			}]
+		},
+		"specops": {
+			"patterns": [{
+				"name": "keyword.specops.w2s",
+				"match": "\\b(hadd|mul|mults(?:at(?:urate)?)?|mlo|multl(?:o(?:w)?)?|mhi|multh(?:i(?:gh)?)?|div(?:ide)?|rdiv(?:ide)?)\\b"
+			}]
+		},
+		"registers": {
+			"patterns": [{
+				"begin": "\\b((?:r[0-7i]|c[0-7]))",
+				"beginCaptures": {
+					"1": { "name": "constant.character.escape.w2s" }
+				},
+				"end": "(\\.?)([xyzw]{1,4})?\\b",
+				"endCaptures": {
+					"1": { "name": "keyword.operator" },
+					"2": { "name": "variable.other.constant" }
+				}
+			}]
+		},
+		"literals": {
+			"match": "(\\b[0-9]+|\\$[0-9a-fA-F]+)\\b",
+			"name": "constant.numeric.w2s"
+		},
+		"pointers": {
+			"patterns": [{
+				"begin": "\\[(r[0-7i]|c[0-7])",
+				"beginCaptures": {
+					"1": { "name": "constant.character.escape.w2s" }
+				},
+				"end": "(\\.?)([xyzw]{1,4})?(\\+?)\\]",
+				"endCaptures": {
+					"1": { "name": "keyword.operator" },
+					"2": { "name": "variable.other.constant" },
+					"3": { "name": "keyword.operator" }
+				}
+			}]
+		}
+	},
+	"scopeName": "source.w2s"
+}

@@ -3,7 +3,7 @@
 	"description": "Wave2 Language Server",
 	"author": "Nimphious",
 	"license": "MIT",
-	"version": "2.0.0",
+	"version": "2.0.1",
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/zeb-hicks/wave2-lsp"
@@ -21,6 +21,25 @@
 	],
 	"main": "./client/out/extension",
 	"contributes": {
+		"languages": [
+			{
+				"id": "w2s",
+				"aliases": [
+					"Wave2 Assembly",
+					"w2s"
+				],
+				"extensions": [
+					".w2s"
+				]
+			}
+		],
+		"grammars": [
+			{
+				"language": "w2s",
+				"scopeName": "source.w2s",
+				"path": "./syntaxes/w2s.tmLanguage.json"
+			}
+		],
 		"configuration": {
 			"type": "object",
 			"title": "Wave2 Language Server",
